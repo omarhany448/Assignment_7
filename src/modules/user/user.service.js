@@ -1,11 +1,19 @@
-import { UserModel } from "./user.model.js";
 import bcrypt from "bcryptjs";
+
+import {
+    findUserByEmail,
+    createUser,
+    findUserById,
+    updateUserById,
+    deleteUserById
+} from "./user.repository.js";
+
 
 export const signup = async (data) => {
 
     const { name, email, password, phone, age } = data;
 
-    const existingUser = await UserModel.findOne({ email });
+    const existingUser = await findUserByEmail(email);
 
     if (existingUser) {
         return {
@@ -18,7 +26,7 @@ export const signup = async (data) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await UserModel.create({
+    const user = await createUser({
         name,
         email,
         password: hashedPassword,
@@ -35,9 +43,10 @@ export const signup = async (data) => {
     };
 };
 
+
 export const login = async (email, password) => {
 
-    const user = await UserModel.findOne({ email });
+    const user = await findUserByEmail(email);
 
     if (!user) {
         return {
@@ -71,9 +80,10 @@ export const login = async (email, password) => {
     };
 };
 
+
 export const updateUser = async (id, data) => {
 
-    const user = await UserModel.findById(id);
+    const user = await findUserById(id);
 
     if (!user) {
         return {
@@ -86,9 +96,7 @@ export const updateUser = async (id, data) => {
 
     if (data.email && data.email !== user.email) {
 
-        const emailExists = await UserModel.findOne({
-            email: data.email
-        });
+        const emailExists = await findUserByEmail(data.email);
 
         if (emailExists) {
             return {
@@ -118,14 +126,7 @@ export const updateUser = async (id, data) => {
         allowedData.age = data.age;
     }
 
-    const updatedUser = await UserModel.findByIdAndUpdate(
-        id,
-        allowedData,
-        {
-            new: true,
-            runValidators: true
-        }
-    );
+    const updatedUser = await updateUserById(id, allowedData);
 
     return {
         status: 200,
@@ -136,9 +137,10 @@ export const updateUser = async (id, data) => {
     };
 };
 
+
 export const deleteUser = async (id) => {
 
-    const user = await UserModel.findByIdAndDelete(id);
+    const user = await deleteUserById(id);
 
     if (!user) {
         return {
@@ -157,9 +159,10 @@ export const deleteUser = async (id) => {
     };
 };
 
+
 export const getUser = async (id) => {
 
-    const user = await UserModel.findById(id);
+    const user = await findUserById(id);
 
     if (!user) {
         return {
@@ -177,4 +180,3 @@ export const getUser = async (id) => {
         }
     };
 };
-

@@ -1,6 +1,7 @@
 {
   "name": "assignment_7(mongoose)",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "main.js",
   "scripts": {

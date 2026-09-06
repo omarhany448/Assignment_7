@@ -1,11 +1,26 @@
 import mongoose from "mongoose";
-import { NoteModel } from "./note.model.js";
+
+import {
+    createNoteRepository,
+    findNoteByIdAndUser,
+    updateNoteById,
+    replaceNoteByIdAndUser,
+    updateAllNotesByUser,
+    deleteNoteByIdAndUser,
+    findNotesByUser,
+    countNotesByUser,
+    findNoteByContent,
+    findNotesWithUser,
+    aggregateNotesRepository,
+    deleteAllNotesByUser
+} from "./note.repository.js";
 
 
 export const createNote = async (data) => {
+
     const { title, content, userId } = data;
 
-    const note = await NoteModel.create({
+    const note = await createNoteRepository({
         title,
         content,
         userId
@@ -23,10 +38,7 @@ export const createNote = async (data) => {
 
 export const updateNote = async (noteId, userId, data) => {
 
-    const note = await NoteModel.findOne({
-        _id: noteId,
-        userId
-    });
+    const note = await findNoteByIdAndUser(noteId, userId);
 
     if (!note) {
         return {
@@ -37,17 +49,10 @@ export const updateNote = async (noteId, userId, data) => {
         };
     }
 
-    const updatedNote = await NoteModel.findByIdAndUpdate(
-        noteId,
-        {
-            title: data.title,
-            content: data.content
-        },
-        {
-            new: true,
-            runValidators: true
-        }
-    );
+    const updatedNote = await updateNoteById(noteId, {
+        title: data.title,
+        content: data.content
+    });
 
     return {
         status: 200,
@@ -61,10 +66,7 @@ export const updateNote = async (noteId, userId, data) => {
 
 export const replaceNote = async (noteId, userId, data) => {
 
-    const note = await NoteModel.findOne({
-        _id: noteId,
-        userId
-    });
+    const note = await findNoteByIdAndUser(noteId, userId);
 
     if (!note) {
         return {
@@ -75,19 +77,13 @@ export const replaceNote = async (noteId, userId, data) => {
         };
     }
 
-    const replacedNote = await NoteModel.findOneAndReplace(
-        {
-            _id: noteId,
-            userId
-        },
+    const replacedNote = await replaceNoteByIdAndUser(
+        noteId,
+        userId,
         {
             title: data.title,
             content: data.content,
             userId
-        },
-        {
-            new: true,
-            runValidators: true
         }
     );
 
@@ -103,11 +99,7 @@ export const replaceNote = async (noteId, userId, data) => {
 
 export const updateAllNotesTitle = async (userId, title) => {
 
-    const result = await NoteModel.updateMany(
-        { userId },
-        { $set: { title } },
-        { runValidators: true }
-    );
+    const result = await updateAllNotesByUser(userId, title);
 
     return {
         status: 200,
@@ -121,10 +113,10 @@ export const updateAllNotesTitle = async (userId, title) => {
 
 export const deleteNote = async (noteId, userId) => {
 
-    const deletedNote = await NoteModel.findOneAndDelete({
-        _id: noteId,
+    const deletedNote = await deleteNoteByIdAndUser(
+        noteId,
         userId
-    });
+    );
 
     if (!deletedNote) {
         return {
@@ -147,14 +139,9 @@ export const deleteNote = async (noteId, userId) => {
 
 export const getPaginatedNotes = async (userId, page, limit) => {
 
-    const skip = (page - 1) * limit;
+    const notes = await findNotesByUser(userId, page, limit);
 
-    const notes = await NoteModel.find({ userId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
-
-    const totalNotes = await NoteModel.countDocuments({ userId });
+    const totalNotes = await countNotesByUser(userId);
 
     return {
         status: 200,
@@ -168,12 +155,10 @@ export const getPaginatedNotes = async (userId, page, limit) => {
     };
 };
 
+
 export const getNoteById = async (noteId, userId) => {
 
-    const note = await NoteModel.findOne({
-        _id: noteId,
-        userId
-    });
+    const note = await findNoteByIdAndUser(noteId, userId);
 
     if (!note) {
         return {
@@ -192,12 +177,10 @@ export const getNoteById = async (noteId, userId) => {
     };
 };
 
+
 export const getNoteByContent = async (userId, content) => {
 
-    const note = await NoteModel.findOne({
-        userId,
-        content
-    });
+    const note = await findNoteByContent(userId, content);
 
     if (!note) {
         return {
@@ -216,11 +199,10 @@ export const getNoteByContent = async (userId, content) => {
     };
 };
 
+
 export const getNotesWithUser = async (userId) => {
 
-    const notes = await NoteModel.find({ userId })
-        .select("title userId createdAt")
-        .populate("userId", "email");
+    const notes = await findNotesWithUser(userId);
 
     return {
         status: 200,
@@ -230,9 +212,10 @@ export const getNotesWithUser = async (userId) => {
     };
 };
 
+
 export const aggregateNotes = async (userId, title) => {
 
-    const notes = await NoteModel.aggregate([
+    const pipeline = [
         {
             $match: {
                 userId: new mongoose.Types.ObjectId(userId)
@@ -280,7 +263,9 @@ export const aggregateNotes = async (userId, title) => {
                 }
             }
         }
-    ]);
+    ];
+
+    const notes = await aggregateNotesRepository(pipeline);
 
     return {
         status: 200,
@@ -293,9 +278,7 @@ export const aggregateNotes = async (userId, title) => {
 
 export const deleteAllNotes = async (userId) => {
 
-    const result = await NoteModel.deleteMany({
-        userId
-    });
+    const result = await deleteAllNotesByUser(userId);
 
     return {
         status: 200,
